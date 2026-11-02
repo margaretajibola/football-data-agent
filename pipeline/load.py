@@ -17,6 +17,8 @@ RAW_DIR = ROOT / "data" / "raw"
 # read the newest raw file saved for an endpoint
 def latest_raw(name):
     files = sorted(RAW_DIR.glob(f"football_data_PL_{name}_*.json"))
+    if not files:
+        return None
     return json.loads(files[-1].read_text())
 
 # insert new rows, update existing ones, so reruns never duplicate
@@ -52,12 +54,14 @@ def load_all():
                ["snapshot_date", "table_type", "team_id"],
                standings_rows(latest_raw("standings"), date.today()))
 
-        upsert(cur, "fd.scorers",
-               ["snapshot_date", "season_year", "player_id", "player_name",
-                "nationality", "position", "team_id", "played_matches",
-                "goals", "assists", "penalties"],
-               ["snapshot_date", "player_id"],
-               scorers_rows(latest_raw("scorers"), date.today()))
+        scorers = latest_raw("scorers")
+        if scorers:
+            upsert(cur, "fd.scorers",
+                   ["snapshot_date", "season_year", "player_id", "player_name",
+                    "nationality", "position", "team_id", "played_matches",
+                    "goals", "assists", "penalties"],
+                   ["snapshot_date", "player_id"],
+                   scorers_rows(scorers, date.today()))
 
         # rebuild the views the agent will query
         cur.execute((ROOT / "sql" / "views.sql").read_text())

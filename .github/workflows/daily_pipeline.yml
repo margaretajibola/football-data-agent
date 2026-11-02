@@ -1,0 +1,27 @@
+name: Daily football pipeline
+
+on:
+  schedule:
+    - cron: "30 6 * * *"   # every day at 06:30 UTC
+  workflow_dispatch:         # lets you run it by hand from the Actions tab
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-pipeline.txt
+
+      - run: pip install -r requirements-pipeline.txt
+
+      - name: Extract and load
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python -m pipeline.run

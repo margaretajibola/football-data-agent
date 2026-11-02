@@ -1,5 +1,3 @@
 python-dotenv
 requests
 psycopg2-binary
-statsbombpy
-pandas

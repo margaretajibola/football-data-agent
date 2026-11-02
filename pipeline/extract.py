@@ -42,7 +42,11 @@ def save_raw(name, data):
     path.write_text(json.dumps(data, indent=2))
     return path
 
+# the run fails if any of these cannot be fetched
+REQUIRED = {"teams", "matches", "standings"}
+
 def extract_all():
+    failed = []
     for name, endpoint in ENDPOINTS.items():
         try:
             data = fetch(f"/competitions/{COMPETITION}/{name}")
@@ -50,8 +54,13 @@ def extract_all():
             print(f"saved {name} -> {path.name}")
         except requests.HTTPError as e:
             print(f"skipped {name}: {e}")
+            if name in REQUIRED:
+                failed.append(name)
         # free tier allows 10 requests per minute, so wait between calls
         time.sleep(7)
+    missing = REQUIRED & set(failed)
+    if missing:
+        raise RuntimeError(f"required endpoints failed: {sorted(missing)}")
 
 
 if __name__ == "__main__":
