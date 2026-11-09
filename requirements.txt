@@ -1,6 +1,15 @@
-python-dotenv
+# pipeline
 requests
+python-dotenv
 psycopg2-binary
+
+# mcp server
 mcp[cli]<2
+
+# agent
+langchain
 langchain-openai
 langchain-mcp-adapters
+
+# ui
+streamlit
