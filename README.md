@@ -130,7 +130,7 @@ python3 -m evals.run_evals Q03 Q17    # only some
 
 ## Scheduling
 
-- **GitHub Actions** (`.github/workflows/daily_pipeline.yml`) refreshes the database every day at 06:30 UTC. Add `FOOTBALL_DATA_API_KEY` and `DATABASE_URL` as repository secrets.
+- **GitHub Actions** (`.github/workflows/daily_pipeline.yml`) refreshes the database once a day. It is scheduled for 06:30 UTC, but GitHub can start scheduled runs a few hours late when it is busy. Loads are idempotent, so the timing does not affect the data. Add `FOOTBALL_DATA_API_KEY` and `DATABASE_URL` as repository secrets.
 - **Airflow** (`dags/football_dag.py`) runs the same pipeline locally. Setup steps are in [docs/pipeline.md](docs/pipeline.md).
 
 ## Project structure

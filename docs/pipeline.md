@@ -43,7 +43,7 @@ Neon Postgres
 
 ## Scheduling
 
-Both schedulers run `pipeline.run` at 06:30 UTC daily.
+Both schedulers run `pipeline.run` once a day, scheduled for 06:30 UTC. GitHub Actions treats the schedule as a best effort, so a run can start a few hours late. This does not matter because every load is idempotent.
 
 - **GitHub Actions** is the real daily run. It uses the repo secrets `FOOTBALL_DATA_API_KEY` and `DATABASE_URL`, and can also be started by hand from the Actions tab.
 - **Airflow** is a local version of the same pipeline, with two tasks (extract, then load), `catchup=False`, and two retries five minutes apart.
@@ -104,3 +104,4 @@ airflow standalone
 - Free tier gives the current season only, and only TOTAL standings (home and away tables are built in the views).
 - Fixtures include future matches with null scores.
 - Neon free tier can pause, so the first connection after a quiet period may be slow.
+- GitHub pauses scheduled workflows after 60 days without commits in the repo. A new commit or a manual run restarts them.
