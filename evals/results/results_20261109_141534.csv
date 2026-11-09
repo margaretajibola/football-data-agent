@@ -1,0 +1,7 @@
+id,category,question,passed,reason,answer,sql,sql_queries,latency_s,model
+Q06,lookup,In what year was Liverpool founded?,True,"The agent correctly stated that Liverpool FC was founded in the year 1892, which matches the expected data.",Liverpool FC was founded in the year **1892**.,SELECT founded FROM teams WHERE name ILIKE 'Liverpool FC',1,11.2,gpt-4o-mini
+Q17,multi_step,"How many home wins, away wins and draws have there been this season?",True,"The agent's answer matches the expected data exactly, providing the correct numbers for home wins, away wins, and draws.","This season, there have been:
+
+- **Home Wins:** 42
+- **Away Wins:** 31
+- **Draws:** 27",SELECT COUNT(*) AS home_wins FROM match_results WHERE result = 'HOME_WIN'; || SELECT COUNT(*) AS away_wins FROM match_results WHERE result = 'AWAY_WIN'; || SELECT COUNT(*) AS draws FROM match_results WHERE result = 'DRAW';,3,6.8,gpt-4o-mini

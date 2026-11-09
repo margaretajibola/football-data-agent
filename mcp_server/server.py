@@ -1,3 +1,5 @@
+from psycopg2 import sql as pgsql
+
 from mcp.server.fastmcp import FastMCP
 
 from mcp_server import db
@@ -23,7 +25,9 @@ def list_views() -> dict:
 
 @mcp.tool()
 def describe_view(view_name: str) -> dict:
-    """Show the columns and types of one analytics view. Call this before writing SQL."""
+    """Show the columns and types of one analytics view. Text columns with a few
+    distinct values also list those values, so use them instead of guessing.
+    Call this before writing SQL."""
     sql = """
         SELECT column_name, data_type
         FROM information_schema.columns
@@ -34,8 +38,26 @@ def describe_view(view_name: str) -> dict:
         _, rows = db.fetch(sql, (view_name,))
         if not rows:
             return {"error": f"No view named {view_name}. Call list_views first."}
-        return {"view": view_name,
-                "columns": [{"name": r[0], "type": r[1]} for r in rows]}
+
+        columns = []
+        for name, data_type in rows:
+            column = {"name": name, "type": data_type}
+            if data_type in ("text", "character varying"):
+                # sample the distinct values, keep them only if there are few
+                sample = pgsql.SQL(
+                    "SELECT DISTINCT {col} FROM {schema}.{view} "
+                    "WHERE {col} IS NOT NULL LIMIT 11"
+                ).format(
+                    col=pgsql.Identifier(name),
+                    schema=pgsql.Identifier("analytics"),
+                    view=pgsql.Identifier(view_name),
+                )
+                _, values = db.fetch(sample)
+                if len(values) <= 10:
+                    column["values"] = [v[0] for v in values]
+            columns.append(column)
+
+        return {"view": view_name, "columns": columns}
     except Exception as e:
         return {"error": str(e)}
 
