@@ -12,18 +12,7 @@ Ask a question like "Which team has the best away record?" or "What are Manchest
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    A["football-data.org API"] --> B["Extract"]
-    B --> C["Transform"]
-    C --> D["Load"]
-    D --> E[("Neon Postgres: fd tables and analytics views")]
-    S["GitHub Actions (daily) / Airflow DAG"] -.-> B
-    E --> G["MCP server: 3 read-only tools"]
-    G --> H["Analyst agent (LangGraph)"]
-    H --> I["Streamlit UI"]
-    J["Eval suite: 20 questions + LLM judge"] --> H
-```
+![Architecture diagram](docs/architecture.png)
 
 **Data side**
 - Extract: football-data.org API, raw JSON saved with timestamps
