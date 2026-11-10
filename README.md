@@ -4,7 +4,7 @@ A data engineering pipeline and an AI analyst agent in one project. The pipeline
 
 ![Screenshot of the analyst agent](docs/screenshot.png)
 
-**Live demo:** coming soon
+**Live demo:** [demo link](https://football-data-agent-lbjscyqsabkyxwpvnds63z.streamlit.app/)
 
 ## What it does
 
