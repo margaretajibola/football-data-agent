@@ -58,7 +58,7 @@ with st.sidebar:
         st.caption("A free shared model. It can be busy when several people ask at once.")
     else:
         typed_key = st.text_input("Your OpenAI API key", type="password", placeholder="sk-...")
-        st.caption("Used only for your questions in this session. It is not stored or logged.")
+        st.caption("Used only for your questions in this session. It is not stored or logged. For safety, use a key with a low spending limit and revoke it when you are done.")
 
     st.header("Try asking")
     for example in EXAMPLES:

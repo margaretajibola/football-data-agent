@@ -149,6 +149,8 @@ EVAL_MODEL=free python3 -m evals.run_evals    # run on the free Groq model
 
 The app is deployed on Streamlit Community Cloud from this repo. It needs two secrets: `READONLY_DATABASE_URL` and `GROQ_API_KEY`. Visitors can use the free model or paste their own OpenAI key, which stays in their session and is never stored. The app goes to sleep after 12 hours without visitors, and wakes with one click.
 
+Using your own OpenAI key is optional. If you do, create a key with a low monthly spending limit in the OpenAI dashboard, and revoke it when you are done. The key stays in your browser session on the app server, is sent only to OpenAI, and is never stored or logged.
+
 ## Project structure
 
 ```
