@@ -72,12 +72,15 @@ async def load_schema(tools):
         return ""
 
 
-async def build_agent():
+async def load_agent_parts():
+    # the slow part: start the MCP server and read the schema. Needs no API key.
     client = MultiServerMCPClient({
         "football": {
             "transport": "stdio",
             "command": sys.executable,
             "args": ["-m", "mcp_server.server"],
+            # the server only gets the read-only database URL
+            "env": {"READONLY_DATABASE_URL": os.environ["READONLY_DATABASE_URL"]},
         }
     })
     tools = await client.get_tools()
@@ -85,8 +88,23 @@ async def build_agent():
     prompt = SYSTEM_PROMPT
     if schema:
         prompt += "\n\nDatabase schema (already loaded):\n" + schema
-    model = init_chat_model(os.getenv("MODEL_NAME", "gpt-4o-mini"))
+    return tools, prompt
+
+
+def make_agent(tools, prompt, api_key=None, free=False):
+    if free:
+        # the free model runs on Groq, with the key from the environment
+        model = init_chat_model(
+            os.getenv("FREE_MODEL", "openai/gpt-oss-20b"), model_provider="groq")
+    else:
+        model = init_chat_model(os.getenv("MODEL_NAME", "gpt-4o-mini"), api_key=api_key)
     return create_agent(model, tools, system_prompt=prompt)
+
+
+async def build_agent(free=False):
+    # used by the terminal chat and the evals, with keys from .env
+    tools, prompt = await load_agent_parts()
+    return make_agent(tools, prompt, free=free)
 
 
 def message_text(message):

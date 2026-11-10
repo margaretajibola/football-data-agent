@@ -72,10 +72,12 @@ async def main():
     wanted = set(sys.argv[1:])
     cases = [c for c in CASES if not wanted or c["id"] in wanted]
 
-    model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
+    free = os.getenv("EVAL_MODEL") == "free"
+    model_name = (os.getenv("FREE_MODEL", "openai/gpt-oss-20b") if free
+                  else os.getenv("MODEL_NAME", "gpt-4o-mini"))
     judge = init_chat_model(os.getenv("JUDGE_MODEL", "gpt-4o-mini"), temperature=0)
     judge = judge.with_structured_output(Verdict)
-    agent = await build_agent()
+    agent = await build_agent(free=free)
 
     results = []
     for case in cases:

@@ -1,11 +1,12 @@
 import asyncio
+import os
 
 import streamlit as st
 
-from agent import ask, build_agent
+from agent import ask, load_agent_parts, make_agent
 
 st.set_page_config(page_title="Football Analyst", page_icon="⚽")
-st.title("Premier League Analyst")
+st.title("Premier League Analyst ⚽️")
 st.caption("Ask in plain English. Answers come from a Postgres database refreshed daily.")
 
 EXAMPLES = [
@@ -18,8 +19,8 @@ EXAMPLES = [
 
 
 @st.cache_resource
-def get_agent():
-    return asyncio.run(build_agent())
+def get_parts():
+    return asyncio.run(load_agent_parts())
 
 
 def clean(text):
@@ -34,12 +35,23 @@ def show_sql(queries):
                 st.code(q, language="sql")
 
 
-agent = get_agent()
+tools, prompt = get_parts()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 with st.sidebar:
+    st.header("Model")
+    mode = st.radio("Choose a model", ["Free model (limited)", "My OpenAI key"],
+                    label_visibility="collapsed")
+    free = mode.startswith("Free")
+    typed_key = ""
+    if free:
+        st.caption("A free shared model. It can be busy when several people ask at once.")
+    else:
+        typed_key = st.text_input("Your OpenAI API key", type="password", placeholder="sk-...")
+        st.caption("Used only for your questions in this session. It is not stored or logged.")
+
     st.header("Try asking")
     for example in EXAMPLES:
         if st.button(example):
@@ -48,10 +60,19 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
+# a pasted key wins, the environment key is for local use
+api_key = typed_key or os.getenv("OPENAI_API_KEY")
+
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(clean(m["content"]))
         show_sql(m.get("sql"))
+
+if not free and not api_key:
+    st.session_state.pop("pending", None)
+    st.info("Paste your OpenAI API key in the sidebar, or switch to the free model.")
+    st.chat_input("Add your API key to chat", disabled=True)
+    st.stop()
 
 question = st.chat_input("Ask about the Premier League") or st.session_state.pop("pending", None)
 
@@ -63,8 +84,19 @@ if question:
         st.markdown(clean(question))
 
     with st.chat_message("assistant"):
-        with st.spinner("Querying the database..."):
-            answer, queries = asyncio.run(ask(agent, question, history))
+        try:
+            with st.spinner("Querying the database..."):
+                agent = make_agent(tools, prompt, api_key, free=free)
+                answer, queries = asyncio.run(ask(agent, question, history))
+        except Exception as e:
+            # never show the raw error, it can contain account details or part of a key
+            queries = []
+            text = str(e).lower()
+            if "429" in text or "rate" in text:
+                answer = ("The free model is busy right now. Wait a minute and try again, "
+                          "or switch to My OpenAI key in the sidebar.")
+            else:
+                answer = "Something went wrong. If you are using your own key, check that it is valid and has credit."
         st.markdown(clean(answer))
         show_sql(queries)
 

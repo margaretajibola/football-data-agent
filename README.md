@@ -1,3 +1,13 @@
+---
+title: Premier League Analyst
+emoji: ⚽
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 8501
+pinned: false
+---
+
 # Football Data Platform and Analyst Agent
 
 A data engineering pipeline and an AI analyst agent in one project. The pipeline pulls Premier League data every day into a cloud Postgres database. The agent answers football questions in plain English by querying that database through an MCP server, and shows the SQL it used.
@@ -25,6 +35,7 @@ Ask a question like "Which team has the best away record?" or "What are Manchest
 - MCP server with three tools: `list_views`, `describe_view`, `run_query`
 - Analyst agent as an MCP client, built with LangGraph
 - Streamlit chat UI with conversation memory and a "SQL used" view
+- Two model options: a free shared model (Groq, `gpt-oss-20b`), or the visitor's own OpenAI key
 - The database schema and real column values are loaded into the agent's prompt at startup
 
 ## Data model
@@ -45,12 +56,13 @@ See [docs/data_dictionary.md](docs/data_dictionary.md) for every column.
 
 ## Safety
 
-The agent can only read data. Four layers enforce it:
+The agent can only read data. Five layers enforce it:
 
 1. **Read-only database role** (`agent_readonly`): read-only transactions, a 10 second statement timeout, a connection limit, and access to the `analytics` schema only
 2. **SELECT-only check** in the MCP server: one statement, must start with SELECT or WITH
 3. **Row limit**: every query is wrapped so it returns at most 100 rows
 4. **Views, not raw tables**: the agent never touches the `fd` tables
+5. **Minimal secrets on the deployed app**: the Space only holds the read-only database URL and a free-tier model key. The write connection and my OpenAI key are never deployed.
 
 `check_readonly.py` tests the role directly: deletes, drops and timeouts all fail as expected.
 
@@ -65,6 +77,13 @@ The agent can only read data. Four layers enforce it:
 | Final | 20/20 (100%) | Schema preloaded into the prompt, judge rules tightened |
 
 Final results by category: lookup 6/6, aggregation 5/5, form and fixtures 3/3, multi-step 3/3, out of scope 1/1, unsafe 2/2. Average latency is about 4 seconds on `gpt-4o-mini`.
+
+Same 20 questions, two models:
+
+| Model | Accuracy | Notes |
+|---|---|---|
+| `gpt-4o-mini` (OpenAI) | 20/20 | Average latency about 4 seconds |
+| `gpt-oss-20b` (Groq, free tier) | 19/20 | The one miss was a rate-limit error, not a wrong answer |
 
 Failures from the first run, and the fix for each:
 
@@ -82,7 +101,7 @@ Results are saved in [evals/results](evals/results).
 
 ## Setup
 
-You need Python 3.12, a [football-data.org](https://www.football-data.org) API key (free), a [Neon](https://neon.tech) Postgres database, and an OpenAI API key.
+You need Python 3.12, a [football-data.org](https://www.football-data.org) API key (free), a [Neon](https://neon.tech) Postgres database, and either an OpenAI API key or a free [Groq](https://console.groq.com) key.
 
 ```bash
 git clone https://github.com/margaretajibola/football_data_agent.git
@@ -99,9 +118,11 @@ Fill in `.env`:
 FOOTBALL_DATA_API_KEY=
 DATABASE_URL=            # main connection string, used by the pipeline
 READONLY_DATABASE_URL=   # agent_readonly role, used by the agent
-OPENAI_API_KEY=
+OPENAI_API_KEY=          # optional: your own model locally, and the eval judge
+GROQ_API_KEY=            # optional: the free model
 MODEL_NAME=gpt-4o-mini   # optional
-JUDGE_MODEL=gpt-4o  # optional, used by the evals
+FREE_MODEL=openai/gpt-oss-20b  # optional
+JUDGE_MODEL=gpt-4o       # optional, used by the evals
 ```
 
 Then:
@@ -124,14 +145,19 @@ streamlit run agent/ui.py
 ## Run the evals
 
 ```bash
-python3 -m evals.run_evals            # all 20 questions
-python3 -m evals.run_evals Q03 Q17    # only some
+python3 -m evals.run_evals                    # all 20 questions
+python3 -m evals.run_evals Q03 Q17            # only some
+EVAL_MODEL=free python3 -m evals.run_evals    # run on the free Groq model
 ```
 
 ## Scheduling
 
 - **GitHub Actions** (`.github/workflows/daily_pipeline.yml`) refreshes the database once a day. It is scheduled for 06:30 UTC, but GitHub can start scheduled runs a few hours late when it is busy. Loads are idempotent, so the timing does not affect the data. Add `FOOTBALL_DATA_API_KEY` and `DATABASE_URL` as repository secrets.
 - **Airflow** (`dags/football_dag.py`) runs the same pipeline locally. Setup steps are in [docs/pipeline.md](docs/pipeline.md).
+
+## Deployment
+
+The app runs as a Docker Space on Hugging Face. The `Dockerfile` copies only the agent and the MCP server, since the data lives in Neon. The Space needs two secrets: `READONLY_DATABASE_URL` and `GROQ_API_KEY`. Visitors can use the free model or paste their own OpenAI key, which stays in their session and is never stored.
 
 ## Project structure
 
@@ -144,6 +170,7 @@ evals/          test cases, runner and saved results
 dags/           Airflow DAG
 .github/        daily pipeline workflow
 docs/           pipeline notes and data dictionary
+Dockerfile      image for the Hugging Face Space
 ```
 
 ## Limits
@@ -151,7 +178,8 @@ docs/           pipeline notes and data dictionary
 - Free API tier: current season only, and standings come as totals only (home and away tables are built in the views)
 - The Neon free tier can pause when idle, so the first query after a quiet period may be slow
 - The agent answers only from the database, so it cannot discuss past seasons or make predictions
+- The free model runs on a shared free tier with a limit of about 8,000 tokens per minute, so it can be busy when several people ask at once. Visitors can switch to their own OpenAI key.
 
 ## Built with
 
-Python, Postgres (Neon), psycopg2, MCP, LangGraph, LangChain, OpenAI, Streamlit, GitHub Actions, Airflow
+Python, Postgres (Neon), psycopg2, MCP, LangGraph, LangChain, OpenAI, Groq, Streamlit, Docker, GitHub Actions, Airflow

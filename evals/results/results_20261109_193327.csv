@@ -1,0 +1,2 @@
+id,category,question,passed,reason,answer,sql,sql_queries,latency_s,model
+Q04,lookup,Who is the top scorer in the league and how many goals do they have?,True,"The agent correctly identified Erling Haaland as the top scorer with 9 goals, which matches the expected data. The team name 'Manchester City FC' was not required for correctness, as the agent's answer did not contradict the expected data.",Erling Haaland – 9 goals.,"SELECT player_name, goals FROM top_scorers ORDER BY goals DESC LIMIT 1;",1,2.7,openai/gpt-oss-20b

@@ -9,6 +9,7 @@ mcp[cli]<2
 # agent
 langchain
 langchain-openai
+langchain-groq
 langchain-mcp-adapters
 
 # ui
