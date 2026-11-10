@@ -1,13 +1,3 @@
----
-title: Premier League Analyst
-emoji: ⚽
-colorFrom: green
-colorTo: blue
-sdk: docker
-app_port: 8501
-pinned: false
----
-
 # Football Data Platform and Analyst Agent
 
 A data engineering pipeline and an AI analyst agent in one project. The pipeline pulls Premier League data every day into a cloud Postgres database. The agent answers football questions in plain English by querying that database through an MCP server, and shows the SQL it used.
@@ -62,7 +52,7 @@ The agent can only read data. Five layers enforce it:
 2. **SELECT-only check** in the MCP server: one statement, must start with SELECT or WITH
 3. **Row limit**: every query is wrapped so it returns at most 100 rows
 4. **Views, not raw tables**: the agent never touches the `fd` tables
-5. **Minimal secrets on the deployed app**: the Space only holds the read-only database URL and a free-tier model key. The write connection and my OpenAI key are never deployed.
+5. **Minimal secrets on the deployed app**: the deployed app only holds the read-only database URL and a free-tier model key. The write connection and my OpenAI key are never deployed.
 
 `check_readonly.py` tests the role directly: deletes, drops and timeouts all fail as expected.
 
@@ -157,7 +147,7 @@ EVAL_MODEL=free python3 -m evals.run_evals    # run on the free Groq model
 
 ## Deployment
 
-The app runs as a Docker Space on Hugging Face. The `Dockerfile` copies only the agent and the MCP server, since the data lives in Neon. The Space needs two secrets: `READONLY_DATABASE_URL` and `GROQ_API_KEY`. Visitors can use the free model or paste their own OpenAI key, which stays in their session and is never stored.
+The app is deployed on Streamlit Community Cloud from this repo. It needs two secrets: `READONLY_DATABASE_URL` and `GROQ_API_KEY`. Visitors can use the free model or paste their own OpenAI key, which stays in their session and is never stored. The app goes to sleep after 12 hours without visitors, and wakes with one click.
 
 ## Project structure
 
@@ -170,7 +160,6 @@ evals/          test cases, runner and saved results
 dags/           Airflow DAG
 .github/        daily pipeline workflow
 docs/           pipeline notes and data dictionary
-Dockerfile      image for the Hugging Face Space
 ```
 
 ## Limits
@@ -179,7 +168,8 @@ Dockerfile      image for the Hugging Face Space
 - The Neon free tier can pause when idle, so the first query after a quiet period may be slow
 - The agent answers only from the database, so it cannot discuss past seasons or make predictions
 - The free model runs on a shared free tier with a limit of about 8,000 tokens per minute, so it can be busy when several people ask at once. Visitors can switch to their own OpenAI key.
+- The demo app sleeps after 12 hours without visitors.
 
 ## Built with
 
-Python, Postgres (Neon), psycopg2, MCP, LangGraph, LangChain, OpenAI, Groq, Streamlit, Docker, GitHub Actions, Airflow
+Python, Postgres (Neon), psycopg2, MCP, LangGraph, LangChain, OpenAI, Groq, Streamlit, Streamlit Community Cloud, GitHub Actions, Airflow

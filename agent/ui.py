@@ -5,6 +5,14 @@ import streamlit as st
 
 from agent import ask, load_agent_parts, make_agent
 
+# on Streamlit Cloud, secrets come from st.secrets, so copy them into the environment
+for key in ("READONLY_DATABASE_URL", "GROQ_API_KEY", "FREE_MODEL"):
+    try:
+        if key not in os.environ and key in st.secrets:
+            os.environ[key] = st.secrets[key]
+    except Exception:
+        pass  # no secrets file when running locally
+
 st.set_page_config(page_title="Football Analyst", page_icon="⚽")
 st.title("Premier League Analyst ⚽️")
 st.caption("Ask in plain English. Answers come from a Postgres database refreshed daily.")
